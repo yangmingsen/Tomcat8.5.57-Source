@@ -17,6 +17,7 @@
 package org.apache.catalina;
 
 /**
+ * 解耦接口，用于指定一个实现类最多与一个Container实例关联。
  * <p>Decoupling interface which specifies that an implementing class is
  * associated with at most one <strong>Container</strong> instance.</p>
  *

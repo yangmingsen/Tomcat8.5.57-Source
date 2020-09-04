@@ -175,7 +175,7 @@ public interface Lifecycle {
 
     /**
      * Add a LifecycleEvent listener to this component.
-     *
+     * 添加监听器
      * @param listener The listener to add
      */
     public void addLifecycleListener(LifecycleListener listener);
@@ -183,7 +183,7 @@ public interface Lifecycle {
 
     /**
      * Get the life cycle listeners associated with this life cycle.
-     *
+     *  获取所有监听器
      * @return An array containing the life cycle listeners associated with this
      *         life cycle. If this component has no listeners registered, a
      *         zero-length array is returned.
@@ -193,13 +193,14 @@ public interface Lifecycle {
 
     /**
      * Remove a LifecycleEvent listener from this component.
-     *
+     * 移除某个监听器
      * @param listener The listener to remove
      */
     public void removeLifecycleListener(LifecycleListener listener);
 
 
     /**
+     * 初始化方法
      * Prepare the component for starting. This method should perform any
      * initialization required post object creation. The following
      * {@link LifecycleEvent}s will be fired in the following order:
@@ -239,7 +240,7 @@ public interface Lifecycle {
      * @exception LifecycleException if this component detects a fatal error
      *  that prevents this component from being used
      */
-    public void start() throws LifecycleException;
+    public void start() throws LifecycleException; //启动方法
 
 
     /**
@@ -273,7 +274,7 @@ public interface Lifecycle {
      * @exception LifecycleException if this component detects a fatal error
      *  that needs to be reported
      */
-    public void stop() throws LifecycleException;
+    public void stop() throws LifecycleException; //停止方法，和start对应
 
     /**
      * Prepare to discard the object. The following {@link LifecycleEvent}s will
@@ -286,7 +287,7 @@ public interface Lifecycle {
      * @exception LifecycleException if this component detects a fatal error
      *  that prevents this component from being used
      */
-    public void destroy() throws LifecycleException;
+    public void destroy() throws LifecycleException;  // 销毁方法，和init对应
 
 
     /**
@@ -294,7 +295,7 @@ public interface Lifecycle {
      *
      * @return The current state of the source component.
      */
-    public LifecycleState getState();
+    public LifecycleState getState();  // 获取生命周期状态
 
 
     /**
@@ -305,7 +306,7 @@ public interface Lifecycle {
      *
      * @return The name of the current component state.
      */
-    public String getStateName();
+    public String getStateName(); // 获取字符串类型的生命周期状态
 
 
     /**

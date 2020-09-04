@@ -843,8 +843,12 @@ public final class StandardServer extends LifecycleMBeanBase implements Server {
                 cl = cl.getParent();
             }
         }
+        //该方法用于对Server进行初始化，关键的地方就是代码最后对services的循环操作，
+        // 对每个service调用init方法
         // Initialize our defined Services
         for (Service service : services) {
+            //调用Service子容器的init方法，让Service组件完成初始化，
+            // 注意：在同一个Server下面，可能存在多个Service组件.
             service.init();
         }
     }

@@ -295,11 +295,17 @@ public class CoyoteAdapter implements Adapter {
         return success;
     }
 
-
+    // *Adapter.service()方法主要做了下面几件事情
+    //1. 根据coyote框架的request和response对象，生成connector的request和response对象（是HttpServletRequest和HttpServletResponse的封装）
+    //2. 补充header
+    //3. 解析请求，该方法会出现代理服务器、设置必要的header等操作
+    //4. 真正进入容器的地方，调用Engine容器下pipeline的阀门
+    //5. 通过request.finishRequest 与 response.finishResponse(刷OutputBuffer中的数据到浏览器) 来完成整个请求
     @Override
     public void service(org.apache.coyote.Request req, org.apache.coyote.Response res)
             throws Exception {
 
+        //// 1. 根据coyote框架的request和response对象，生成connector的request和response对象（是HttpServletRequest和HttpServletResponse的封装）
         Request request = (Request) req.getNote(ADAPTER_NOTES);
         Response response = (Response) res.getNote(ADAPTER_NOTES);
 
@@ -321,7 +327,7 @@ public class CoyoteAdapter implements Adapter {
             // Set query string encoding
             req.getParameters().setQueryStringCharset(connector.getURICharset());
         }
-
+        // 2. 补充header
         if (connector.getXpoweredBy()) {
             response.addHeader("X-Powered-By", POWERED_BY);
         }
@@ -334,12 +340,18 @@ public class CoyoteAdapter implements Adapter {
         try {
             // Parse and set Catalina and configuration specific
             // request parameters
+            // 3. 解析请求，该方法会出现代理服务器、设置必要的header等操作
+            // 用来处理请求映射 (获取 host, context, wrapper, URI 后面的参数的解析, sessionId )
             postParseSuccess = postParseRequest(req, request, res, response);
             if (postParseSuccess) {
                 //check valves if we support async
                 request.setAsyncSupported(
                         connector.getService().getContainer().getPipeline().isAsyncSupported());
                 // Calling the container
+                // 4. 真正进入容器的地方，调用Engine容器下pipeline的阀门
+                //Connector调用getService返回StandardService；
+                //StandardService调用getContainer返回StandardEngine；
+                //StandardEngine调用getPipeline返回与其关联的StandardPipeline；
                 connector.getService().getContainer().getPipeline().getFirst().invoke(
                         request, response);
             }
@@ -370,7 +382,10 @@ public class CoyoteAdapter implements Adapter {
                     request.getAsyncContextInternal().setErrorState(throwable, true);
                 }
             } else {
+                //5. 通过request.finishRequest 与 response.finishResponse(刷OutputBuffer中的数据到浏览器) 来完成整个请求
                 request.finishRequest();
+                //将 org.apache.catalina.connector.Response对应的 OutputBuffer 中的数据 刷到 org.apache.coyote.Response 对应的 InternalOutputBuffer 中,
+                // 并且最终调用 socket对应的 outputStream 将数据刷出去( 这里会组装 Http Response 中的 header 与 body 里面的数据, 并且刷到远端 )
                 response.finishResponse();
             }
 
@@ -551,6 +566,8 @@ public class CoyoteAdapter implements Adapter {
      * to enable the request/response pair to be passed to the start of the
      * container pipeline for processing.
      *
+     * postParseRequest方法对请求做预处理，如对路径去除分号表示的路径参数、进行URI解码、规格化（点号和两点号）
+     *
      * @param req      The coyote request object
      * @param request  The catalina request object
      * @param res      The coyote response object
@@ -620,6 +637,16 @@ public class CoyoteAdapter implements Adapter {
 
         MessageBytes decodedURI = req.decodedURI();
 
+        //以MessageBytes的类型是T_BYTES为例：
+        //
+        //parsePathParameters方法去除URI中分号表示的路径参数；
+        //req.getURLDecoder()得到一个UDecoder实例，它的convert方法对URI解码，这里的解码只是移除百分号，计算百分号后两位的十六进制数字值以替代原来的三位百分号编码；
+        //normalize方法规格化URI，解释路径中的“.”和“..”；
+        //convertURI方法利用Connector的uriEncoding属性将URI的字节转换为字符表示；
+
+        //注意connector.getService().getMapper().map(serverName, decodedURI, version, request.getMappingData()) 这行，
+        // 之前Service启动时MapperListener注册了该Service内的各Host和Context。根据URI选择Context时，Mapper的map方法采用的是convertURI方法解码后的URI
+        // 与每个Context的路径去比较
         if (undecodedURI.getType() == MessageBytes.T_BYTES) {
             // Copy the raw URI to the decodedURI
             decodedURI.duplicate(undecodedURI);

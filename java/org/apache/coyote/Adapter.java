@@ -22,6 +22,8 @@ import org.apache.tomcat.util.net.SocketEvent;
  * Adapter. This represents the entry point in a coyote-based servlet container.
  *
  *
+ * Adapter用于连接Connector和Container，起到承上启下的作用。Processor会调用Adapter.service()方法。我们来分析一下，主要做了下面几件事情：
+ *
  * @author Remy Maucherat
  * @see ProtocolHandler
  */

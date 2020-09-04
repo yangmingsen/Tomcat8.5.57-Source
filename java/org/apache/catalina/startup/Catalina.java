@@ -526,6 +526,7 @@ public class Catalina {
 
 
     /**
+     * 启动一个服务实例
      * Start a new server instance.
      */
     public void load() {
@@ -539,16 +540,21 @@ public class Catalina {
 
         initDirs();
 
+        // 初始化jmx的环境变量
         // Before digester - it may be needed
         initNaming();
 
         // Create and execute our Digester
+        //定义解析server.xml的配置，告诉Digester哪个xml标签应该解析成什么类
         Digester digester = createStartDigester();
 
         InputSource inputSource = null;
         InputStream inputStream = null;
         File file = null;
         try {
+            // 首先尝试加载conf/server.xml，省略部分代码......
+            // 如果不存在conf/server.xml，则加载server-embed.xml(该xml在catalina.jar中)，省略部分代码......
+            // 如果还是加载不到xml，则直接return，省略部分代码......
             try {
                 file = configFile();
                 inputStream = new FileInputStream(file);
@@ -607,7 +613,11 @@ public class Catalina {
 
             try {
                 inputSource.setByteStream(inputStream);
+
+                // 把Catalina作为一个顶级实例
                 digester.push(this);
+
+                // 解析过程会实例化各个组件，比如Server、Container、Connector等
                 digester.parse(inputSource);
             } catch (SAXParseException spe) {
                 log.warn("Catalina.start using " + getConfigFile() + ": " +
@@ -618,6 +628,7 @@ public class Catalina {
                 return;
             }
         } finally {
+            // 关闭IO流......
             if (inputStream != null) {
                 try {
                     inputStream.close();
@@ -627,6 +638,7 @@ public class Catalina {
             }
         }
 
+        // 给Server设置catalina信息
         getServer().setCatalina(this);
         getServer().setCatalinaHome(Bootstrap.getCatalinaHomeFile());
         getServer().setCatalinaBase(Bootstrap.getCatalinaBaseFile());
@@ -634,8 +646,13 @@ public class Catalina {
         // Stream redirection
         initStreams();
 
+        // 调用Lifecycle的init阶段
         // Start the new server
         try {
+            //可以看到, 这里有一个我们今天感兴趣的方法, getServer.init(), 这个方法看名字是启动 Server 的初始化,
+            // 而 Server 是我们上面图中最外层的容器. 因此, 我们去看看该方法, 也就是LifecycleBase.init() 方法.
+            // 该方法是一个模板方法, 只是定义了一个算法的骨架, 将一些细节算法放在子类中去实现.
+            //Server的实现类为StandardServer
             getServer().init();
         } catch (LifecycleException e) {
             if (Boolean.getBoolean("org.apache.catalina.startup.EXIT_ON_INIT_FAILURE")) {
@@ -685,7 +702,7 @@ public class Catalina {
 
         // Start the new server
         try {
-            getServer().start();
+            getServer().start(); //调用Server的start方法，启动Server组件
         } catch (LifecycleException e) {
             log.fatal(sm.getString("catalina.serverStartFail"), e);
             try {
@@ -702,6 +719,7 @@ public class Catalina {
         }
 
         // Register shutdown hook
+        // 注册勾子，用于安全关闭tomcat
         if (useShutdownHook) {
             if (shutdownHook == null) {
                 shutdownHook = new CatalinaShutdownHook();
@@ -717,7 +735,7 @@ public class Catalina {
                         false);
             }
         }
-
+        // Bootstrap中会设置await为true，其目的在于让tomcat在shutdown端口阻塞监听关闭命令
         if (await) {
             await();
             stop();

@@ -21,6 +21,20 @@ package org.apache.catalina.security;
  * Java SecurityManager so that the defineClassInPackage
  * RuntimePermission does not trigger an AccessControlException.
  *
+ * 这儿其实就是使用catalinaLoader加载tomcat源代码里面的各个专用类。我们大致罗列一下待加载的类所在的package：
+ *
+ * org.apache.catalina.core.*
+ * org.apache.coyote.*
+ * org.apache.catalina.loader.*
+ * org.apache.catalina.realm.*
+ * org.apache.catalina.servlets.*
+ * org.apache.catalina.session.*
+ * org.apache.catalina.util.*
+ * org.apache.catalina.valves.*
+ * javax.servlet.http.Cookie
+ * org.apache.catalina.connector.*
+ * org.apache.tomcat.*
+ *
  * @author Glenn L. Nielsen
  */
 public final class SecurityClassLoad {

@@ -419,16 +419,18 @@ public class StandardService extends LifecycleMBeanBase implements Service {
         // Start our defined Container first
         if (engine != null) {
             synchronized (engine) {
+                // 启动Engine
                 engine.start();
             }
         }
 
         synchronized (executors) {
             for (Executor executor: executors) {
+                // 启动Executor线程池
                 executor.start();
             }
         }
-
+        // 启动MapperListener
         mapperListener.start();
 
         // Start our defined Connectors second
@@ -437,6 +439,7 @@ public class StandardService extends LifecycleMBeanBase implements Service {
                 try {
                     // If it has already failed, don't try and start it
                     if (connector.getState() != LifecycleState.FAILED) {
+                        // 启动Connector
                         connector.start();
                     }
                 } catch (Exception e) {
@@ -522,19 +525,24 @@ public class StandardService extends LifecycleMBeanBase implements Service {
 
 
     /**
+     * 调用启动前的初始化。 这用于允许连接器在Unix操作环境下绑定到受限端口。
+     *
      * Invoke a pre-startup initialization. This is used to allow connectors
      * to bind to restricted ports under Unix operating environments.
      */
     @Override
     protected void initInternal() throws LifecycleException {
 
-        super.initInternal();
+        // 往jmx中注册自己
+        super.initInternal(); //往jmx中注册StandardService
 
+        // 初始化Engine
         if (engine != null) {
-            engine.init();
+            engine.init();  //初始化Engine，而Engine初始化过程中会去初始化Realm(权限相关的组件)
         }
 
         // Initialize any Executors
+        // 存在Executor线程池，则进行初始化，默认是没有的
         for (Executor executor : findExecutors()) {
             if (executor instanceof JmxEnabled) {
                 ((JmxEnabled) executor).setDomain(getDomain());
@@ -546,7 +554,9 @@ public class StandardService extends LifecycleMBeanBase implements Service {
         mapperListener.init();
 
         // Initialize our defined Connectors
+        // 初始化Connector，而Connector又会对ProtocolHandler进行初始化，开启应用端口的监听,
         synchronized (connectorsLock) {
+            //初始化Connector连接器，默认有http1.1、ajp连接器，而这个Connector初始化过程，又会对ProtocolHandler进行初始化，开启应用端口的监听
             for (Connector connector : connectors) {
                 try {
                     connector.init();

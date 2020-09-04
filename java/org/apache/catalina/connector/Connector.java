@@ -72,6 +72,7 @@ public class Connector extends LifecycleMBeanBase  {
 
     // ------------------------------------------------------------ Constructor
 
+    //1. 无参构造方法，传入参数为空协议，会默认使用`HTTP/1.1`
     public Connector() {
         this(null);
     }
@@ -80,6 +81,7 @@ public class Connector extends LifecycleMBeanBase  {
     public Connector(String protocol) {
         setProtocol(protocol);
         // Instantiate protocol handler
+        // 5. 使用protocolHandler的类名构造ProtocolHandler的实例
         ProtocolHandler p = null;
         try {
             Class<?> clazz = Class.forName(protocolHandlerClassName);
@@ -642,12 +644,14 @@ public class Connector extends LifecycleMBeanBase  {
         boolean aprConnector = AprLifecycleListener.isAprAvailable() &&
                 AprLifecycleListener.getUseAprConnector();
 
+        // 2. `HTTP/1.1`或`null`，protocolHandler使用`org.apache.coyote.http11.Http11NioProtocol`，不考虑apr
         if ("HTTP/1.1".equals(protocol) || protocol == null) {
             if (aprConnector) {
                 setProtocolHandlerClassName("org.apache.coyote.http11.Http11AprProtocol");
             } else {
                 setProtocolHandlerClassName("org.apache.coyote.http11.Http11NioProtocol");
             }
+            // 3. `AJP/1.3`，protocolHandler使用`org.apache.coyote.ajp.AjpNioProtocol`，不考虑apr
         } else if ("AJP/1.3".equals(protocol)) {
             if (aprConnector) {
                 setProtocolHandlerClassName("org.apache.coyote.ajp.AjpAprProtocol");
@@ -655,6 +659,7 @@ public class Connector extends LifecycleMBeanBase  {
                 setProtocolHandlerClassName("org.apache.coyote.ajp.AjpNioProtocol");
             }
         } else {
+            // 4. 其他情况，使用传入的protocol作为protocolHandler的类名
             setProtocolHandlerClassName(protocol);
         }
     }
@@ -1043,11 +1048,12 @@ public class Connector extends LifecycleMBeanBase  {
 
         super.initInternal();
 
-        // Initialize adapter
+        // Initialize adapter  1. 初始化adapter
         adapter = new CoyoteAdapter(this);
         protocolHandler.setAdapter(adapter);
 
         // Make sure parseBodyMethodsSet has a default
+        // 2. 设置接受body的method列表，默认为POST
         if (null == parseBodyMethodsSet) {
             setParseBodyMethods(getParseBodyMethods());
         }
@@ -1070,7 +1076,7 @@ public class Connector extends LifecycleMBeanBase  {
                 jsseProtocolHandler.setSslImplementationName(OpenSSLImplementation.class.getName());
             }
         }
-
+        // 3. 初始化protocolHandler
         try {
             protocolHandler.init();
         } catch (Exception e) {
@@ -1096,7 +1102,7 @@ public class Connector extends LifecycleMBeanBase  {
 
         setState(LifecycleState.STARTING);
 
-        try {
+        try {// 关键代码就一行，调用ProtocolHandler.start()方法
             protocolHandler.start();
         } catch (Exception e) {
             throw new LifecycleException(

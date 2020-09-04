@@ -69,7 +69,7 @@ import org.apache.tomcat.util.modeler.Util;
  * @author Craig R. McClanahan
  * @author Remy Maucherat
  */
-@SuppressWarnings("deprecation") // SingleThreadModel
+@SuppressWarnings("deprecation") // SingleThreadModel //
 public class StandardWrapper extends ContainerBase
     implements ServletConfig, Wrapper, NotificationEmitter {
 
@@ -733,6 +733,11 @@ public class StandardWrapper extends ContainerBase
      * that this instance is not allocated again until it is deallocated by a
      * call to <code>deallocate()</code>.
      *
+     * 1. 卸载过程中，不能分配Servlet
+     * 2. 如果不是单线程模式，则每次都会返回同一个Servlet（默认Servlet实现方式）
+     * 3. Servlet实例为null或者Servlet实例还未初始化，使用synchronized来保证并发时的原子性
+     * 4. 如果是单线程模式，则使用servlet对象池技术来加载多个Servlet
+     *
      * @exception ServletException if the servlet init() method threw
      *  an exception
      * @exception ServletException if a loading error occurs
@@ -741,6 +746,7 @@ public class StandardWrapper extends ContainerBase
     public Servlet allocate() throws ServletException {
 
         // If we are currently unloading this servlet, throw an exception
+        // 卸载过程中，不能分配Servlet
         if (unloading) {
             throw new ServletException(sm.getString("standardWrapper.unloading", getName()));
         }
@@ -748,8 +754,10 @@ public class StandardWrapper extends ContainerBase
         boolean newInstance = false;
 
         // If not SingleThreadedModel, return the same instance every time
+        // 如果Wrapper没有实现SingleThreadedModel，则每次都会返回同一个Servlet
         if (!singleThreadModel) {
             // Load and initialize our instance if necessary
+            // 实例为null或者实例还未初始化，使用synchronized来保证并发时的原子性
             if (instance == null || !instanceInitialized) {
                 synchronized (this) {
                     if (instance == null) {
@@ -760,6 +768,7 @@ public class StandardWrapper extends ContainerBase
 
                             // Note: We don't know if the Servlet implements
                             // SingleThreadModel until we have loaded it.
+                            // 加载Servlet
                             instance = loadServlet();
                             newInstance = true;
                             if (!singleThreadModel) {
@@ -775,6 +784,7 @@ public class StandardWrapper extends ContainerBase
                             throw new ServletException(sm.getString("standardWrapper.allocate"), e);
                         }
                     }
+                    // 初始化Servlet
                     if (!instanceInitialized) {
                         initServlet(instance);
                     }
@@ -790,7 +800,7 @@ public class StandardWrapper extends ContainerBase
                         nInstances++;
                     }
                 }
-            } else {
+            } else {  // 非单线程模型，直接返回已经创建的Servlet，也就是说，这种情况下只会创建一个Servlet
                 if (log.isTraceEnabled()) {
                     log.trace("  Returning non-STM instance");
                 }
@@ -802,7 +812,7 @@ public class StandardWrapper extends ContainerBase
                 return instance;
             }
         }
-
+        // 如果是单线程模式，则使用servlet对象池技术来加载多个Servlet
         synchronized (instancePool) {
             while (countAllocated.get() >= nInstances) {
                 // Allocate a new instance if possible, or else wait
@@ -1015,6 +1025,11 @@ public class StandardWrapper extends ContainerBase
      * at least one initialized instance.  This can be used, for example, to
      * load servlets that are marked in the deployment descriptor to be loaded
      * at server startup time.
+     *
+     * 关键点：
+     * 1. 通过实例管理器，创建Servlet实例，而实例管理器是通过特殊的类加载器来加载给定的类
+     * 2. 调用Servlet的init方法
+     *
      * @return the loaded Servlet instance
      * @throws ServletException for a Servlet load error
      */
@@ -1039,6 +1054,7 @@ public class StandardWrapper extends ContainerBase
                     (sm.getString("standardWrapper.notClass", getName()));
             }
 
+            // 关键的地方，就是通过实例管理器，创建Servlet实例，而实例管理器是通过特殊的类加载器来加载给定的类
             InstanceManager instanceManager = ((StandardContext)getParent()).getInstanceManager();
             try {
                 servlet = (Servlet) instanceManager.newInstance(servletClass);
@@ -1088,6 +1104,7 @@ public class StandardWrapper extends ContainerBase
                 singleThreadModel = true;
             }
 
+            // 调用Servlet的init方法
             initServlet(servlet);
 
             fireContainerEvent("load", this);

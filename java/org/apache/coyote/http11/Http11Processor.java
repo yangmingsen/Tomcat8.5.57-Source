@@ -478,6 +478,8 @@ public class Http11Processor extends AbstractProcessor {
     }
 
 
+    //生成Request和Response对象
+    //调用Adapter.service()方法，将生成的Request和Response对象传进去
     @Override
     public SocketState service(SocketWrapperBase<?> socketWrapper)
         throws IOException {
@@ -612,6 +614,8 @@ public class Http11Processor extends AbstractProcessor {
             if (getErrorState().isIoAllowed()) {
                 try {
                     rp.setStage(org.apache.coyote.Constants.STAGE_SERVICE);
+
+                    //调用Adapter.service()方法，将生成的Request和Response对象传进去
                     getAdapter().service(request, response);
                     // Handle when the response was committed before a serious
                     // error occurred.  Throwing a ServletException should both

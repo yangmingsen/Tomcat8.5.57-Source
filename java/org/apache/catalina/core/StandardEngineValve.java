@@ -69,6 +69,9 @@ final class StandardEngineValve extends ValveBase {
     @Override
     public final void invoke(Request request, Response response)
         throws IOException, ServletException {
+        //该方法很简单，校验该Engline 容器是否含有Host容器，
+        // 如果不存在，返回400错误，否则继续执行 host.getPipeline().getFirst().invoke(request, response)，
+        // 可以看到 Host 容器先获取自己的管道，再获取第一个阀门，我们再看看该阀门的 invoke 方法。
 
         // Select the Host to be used for this Request
         Host host = request.getHost();

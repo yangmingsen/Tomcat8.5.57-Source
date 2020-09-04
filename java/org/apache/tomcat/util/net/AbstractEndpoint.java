@@ -1061,6 +1061,10 @@ public abstract class AbstractEndpoint<S> {
      * @param dispatch      Should the processing be performed on a new
      *                          container thread
      *
+     *
+     * dispatch参数表示是否要在另外的线程中处理，上文processKey各处传递的参数都是true。
+     *      dispatch为true且工作线程池存在时会执行executor.execute(sc)，之后是由工作线程池处理已连接套接字；
+     *      否则继续由Poller线程自己处理已连接套接字。
      * @return if processing was triggered successfully
      */
     public boolean processSocket(SocketWrapperBase<S> socketWrapper,
@@ -1069,12 +1073,14 @@ public abstract class AbstractEndpoint<S> {
             if (socketWrapper == null) {
                 return false;
             }
+            // 1. 从`processorCache`里面拿一个`Processor`来处理socket，`Processor`的实现为`SocketProcessor`
             SocketProcessorBase<S> sc = processorCache.pop();
             if (sc == null) {
                 sc = createSocketProcessor(socketWrapper, event);
             } else {
                 sc.reset(socketWrapper, event);
             }
+            // 2. 将`Processor`放到工作线程池中执行
             Executor executor = getExecutor();
             if (dispatch && executor != null) {
                 executor.execute(sc);
@@ -1114,6 +1120,7 @@ public abstract class AbstractEndpoint<S> {
     public abstract void stopInternal() throws Exception;
 
     public void init() throws Exception {
+        // 执行bind()方法
         if (bindOnInit) {
             bind();
             bindState = BindState.BOUND_ON_INIT;

@@ -66,10 +66,10 @@ public final class Bootstrap {
     private static final Pattern PATH_PATTERN = Pattern.compile("(\"[^\"]*\")|(([^,])*)");
 
     static {
-        // Will always be non-null
+        // Will always be non-null  // 获取用户目录
         String userDir = System.getProperty("user.dir");
 
-        // Home first
+        // Home first 第一步，从环境变量中获取catalina.home，在没有获取到的时候将执行后面的获取操作
         String home = System.getProperty(Constants.CATALINA_HOME_PROP);
         File homeFile = null;
 
@@ -82,6 +82,7 @@ public final class Bootstrap {
             }
         }
 
+        //第二步，在第一步没获取的时候，从bootstrap.jar所在目录的上一级目录获取
         if (homeFile == null) {
             // First fall-back. See if current directory is a bin directory
             // in a normal Tomcat install
@@ -97,6 +98,7 @@ public final class Bootstrap {
             }
         }
 
+        //第三步，第二步中的bootstrap.jar可能不存在，这时我们直接把user.dir作为我们的home目录
         if (homeFile == null) {
             // Second fall-back. Use current directory
             File f = new File(userDir);
@@ -106,11 +108,12 @@ public final class Bootstrap {
                 homeFile = f.getAbsoluteFile();
             }
         }
-
+        //重新设置catalinaHome属性
         catalinaHomeFile = homeFile;
         System.setProperty(
                 Constants.CATALINA_HOME_PROP, catalinaHomeFile.getPath());
 
+        //接下来获取CATALINA_BASE（从系统变量中获取），若不存在，则将CATALINA_BASE保持和CATALINA_HOME相同
         // Then base
         String base = System.getProperty(Constants.CATALINA_BASE_PROP);
         if (base == null) {
@@ -124,6 +127,7 @@ public final class Bootstrap {
             }
             catalinaBaseFile = baseFile;
         }
+        //重新设置catalinaBase属性
         System.setProperty(
                 Constants.CATALINA_BASE_PROP, catalinaBaseFile.getPath());
     }
@@ -143,17 +147,21 @@ public final class Bootstrap {
 
     // -------------------------------------------------------- Private Methods
 
-
+    //关键的方法initClassLoaders，这个方法负责初始化Tomcat的类加载器
     private void initClassLoaders() {
         try {
+            // 创建commonLoader，如果未创建成功的话，则使用应用程序类加载器作为commonLoader
             commonLoader = createClassLoader("common", null);
             if (commonLoader == null) {
                 // no config file, default to this loader - we might be in a 'single' env.
                 commonLoader = this.getClass().getClassLoader();
             }
+            // 创建catalinaLoader，父类加载器为commonLoader
             catalinaLoader = createClassLoader("server", commonLoader);
+            //创建sharedLoader，父类加载器为commonLoader
             sharedLoader = createClassLoader("shared", commonLoader);
         } catch (Throwable t) {
+            // 如果创建的过程中出现异常了，日志记录完成之后直接系统退出
             handleThrowable(t);
             log.error("Class loader creation threw exception", t);
             System.exit(1);
@@ -163,17 +171,20 @@ public final class Bootstrap {
 
     private ClassLoader createClassLoader(String name, ClassLoader parent)
         throws Exception {
-
+        // 获取类加载器待加载的位置，如果为空，则不需要加载特定的位置，使用父类加载返回回去。
         String value = CatalinaProperties.getProperty(name + ".loader");
         if ((value == null) || (value.equals("")))
             return parent;
 
+        // 替换属性变量，比如：${catalina.base}、${catalina.home}
         value = replace(value);
 
         List<Repository> repositories = new ArrayList<>();
 
+        // 解析属性路径变量为仓库路径数组
         String[] repositoryPaths = getPaths(value);
 
+        // 对每个仓库路径进行repositories设置。我们可以把repositories看成一个个待加载的位置对象，可以是一个classes目录，一个jar文件目录等等
         for (String repository : repositoryPaths) {
             // Check for a JAR URL repository
             try {
@@ -197,6 +208,7 @@ public final class Bootstrap {
             }
         }
 
+        // 使用类加载器工厂创建一个类加载器
         return ClassLoaderFactory.createClassLoader(repositories, parent);
     }
 
@@ -252,19 +264,22 @@ public final class Bootstrap {
      * @throws Exception Fatal initialization error
      */
     public void init() throws Exception {
-
+        // 非常关键的地方，初始化类加载器s，后面我们会详细具体地分析这个方法
         initClassLoaders();
 
+        // 设置上下文类加载器为catalinaLoader，这个类加载器负责加载Tomcat专用的类
         Thread.currentThread().setContextClassLoader(catalinaLoader);
 
         SecurityClassLoad.securityClassLoad(catalinaLoader);
 
+        // 使用catalinaLoader加载我们的Catalina类
         // Load our startup class and call its process() method
         if (log.isDebugEnabled())
             log.debug("Loading startup class");
         Class<?> startupClass = catalinaLoader.loadClass("org.apache.catalina.startup.Catalina");
-        Object startupInstance = startupClass.getConstructor().newInstance();
+        Object startupInstance = startupClass.getConstructor().newInstance(); //使用反射方法实例化Catalina
 
+        // 设置Catalina类的parentClassLoader属性为sharedLoader
         // Set the shared extensions class loader
         if (log.isDebugEnabled())
             log.debug("Setting startup class properties");
@@ -277,6 +292,7 @@ public final class Bootstrap {
             startupInstance.getClass().getMethod(methodName, paramTypes);
         method.invoke(startupInstance, paramValues);
 
+        // catalina守护对象为刚才使用catalinaLoader加载类、并初始化出来的Catalina对象
         catalinaDaemon = startupInstance;
     }
 
@@ -304,6 +320,7 @@ public final class Bootstrap {
         if (log.isDebugEnabled()) {
             log.debug("Calling startup class " + method);
         }
+        //通过反射调用Catalina的load()方法
         method.invoke(catalinaDaemon, param);
     }
 
@@ -344,6 +361,7 @@ public final class Bootstrap {
         }
 
         Method method = catalinaDaemon.getClass().getMethod("start", (Class [])null);
+        //由Bootstrap反射调用Catalina的start方法
         method.invoke(catalinaDaemon, (Object [])null);
     }
 
@@ -437,19 +455,22 @@ public final class Bootstrap {
      *
      * @param args Command line arguments to be processed
      */
-    public static void main(String args[]) {
+    public static void main(String args[]) { //main方法大体分成两块，一块为init，另一块为load+start
 
         synchronized (daemonLock) {
+            // 第一块，main方法第一次执行的时候，daemon肯定为null，所以直接new了一个Bootstrap对象，然后执行其init()方法
             if (daemon == null) {
                 // Don't set daemon until init() has completed
                 Bootstrap bootstrap = new Bootstrap();
                 try {
+                    //初始化 类加载机制
                     bootstrap.init();
                 } catch (Throwable t) {
                     handleThrowable(t);
                     t.printStackTrace();
                     return;
                 }
+                // daemon守护对象设置为bootstrap
                 daemon = bootstrap;
             } else {
                 // When running as a service the call to stop will be on a new
@@ -459,6 +480,7 @@ public final class Bootstrap {
             }
         }
 
+        // 第二块，执行守护对象的load方法和start方法
         try {
             String command = "start";
             if (args.length > 0) {
@@ -473,8 +495,11 @@ public final class Bootstrap {
                 args[args.length - 1] = "stop";
                 daemon.stop();
             } else if (command.equals("start")) {
+                // bootstrap 和 Catalina 一脉相连, 这里设置, 方法内部设置 Catalina 实例setAwait方法
                 daemon.setAwait(true);
+               // args 为 空,方法内部调用 Catalina 的 load 方法.
                 daemon.load(args);
+                //相同, 反射调用 Catalina 的 start 方法 ,至此,启动结束
                 daemon.start();
                 if (null == daemon.getServer()) {
                     System.exit(1);

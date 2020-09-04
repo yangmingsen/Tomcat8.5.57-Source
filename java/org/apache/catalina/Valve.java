@@ -24,6 +24,7 @@ import org.apache.catalina.connector.Request;
 import org.apache.catalina.connector.Response;
 
 /**
+ * Valve作为一个个基础的阀门，扮演着业务实际执行者的角色
  * <p>A <b>Valve</b> is a request processing component associated with a
  * particular Container.  A series of Valves are generally associated with
  * each other into a Pipeline.  The detailed contract for a Valve is included
@@ -43,12 +44,14 @@ public interface Valve {
     //-------------------------------------------------------------- Properties
 
     /**
+     * 获取下一个阀门
      * @return the next Valve in the pipeline containing this Valve, if any.
      */
     public Valve getNext();
 
 
     /**
+     * 设置下一个阀门
      * Set the next Valve in the pipeline containing this Valve.
      *
      * @param valve The new next valve, or <code>null</code> if none
@@ -60,6 +63,7 @@ public interface Valve {
 
 
     /**
+     * 后台执行逻辑，主要在类加载上下文中使用到
      * Execute a periodic task, such as reloading, etc. This method will be
      * invoked inside the classloading context of this container. Unexpected
      * throwables will be caught and logged.
@@ -114,9 +118,9 @@ public interface Valve {
      * @exception ServletException if a servlet error occurs, or is thrown
      *  by a subsequently invoked Valve, Filter, or Servlet
      */
-    public void invoke(Request request, Response response)
+    public void invoke(Request request, Response response) //执行业务逻辑
         throws IOException, ServletException;
 
-
+    // 是否异步执行
     public boolean isAsyncSupported();
 }

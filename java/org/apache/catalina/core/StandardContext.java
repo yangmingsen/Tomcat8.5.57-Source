@@ -155,6 +155,7 @@ public class StandardContext extends ContainerBase
 
     /**
      * Create a new StandardContext component with the default basic Valve.
+     * 该方法用于设置Context.pipeline的基础阀门。
      */
     public StandardContext() {
 
@@ -4939,6 +4940,7 @@ public class StandardContext extends ContainerBase
             resourcesStart();
         }
 
+        //WebApp类加载器
         if (getLoader() == null) {
             WebappLoader webappLoader = new WebappLoader();
             webappLoader.setDelegate(getDelegate());

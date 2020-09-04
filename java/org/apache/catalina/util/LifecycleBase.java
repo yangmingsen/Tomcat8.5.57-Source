@@ -118,8 +118,8 @@ public abstract class LifecycleBase implements Lifecycle {
      * @param data  Data associated with event.
      */
     protected void fireLifecycleEvent(String type, Object data) {
-        LifecycleEvent event = new LifecycleEvent(this, type, data);
-        for (LifecycleListener listener : lifecycleListeners) {
+        LifecycleEvent event = new LifecycleEvent(this, type, data); // 事件监听,观察者模式的另一种方式
+        for (LifecycleListener listener : lifecycleListeners) { // 监听器数组 关注 事件(启动或者关闭事件)   // 循环通知所有生命周期时间侦听器
             listener.lifecycleEvent(event);
         }
     }
@@ -133,6 +133,12 @@ public abstract class LifecycleBase implements Lifecycle {
 
         try {
             setStateInternal(LifecycleState.INITIALIZING, null, false);
+            //  initInternal() 模板方法
+            /**
+             * 采用模板方法模式来对所有支持生命周期管理的组件的生命周期各个阶段进行了总体管理，
+             * 每个需要生命周期管理的组件只需要继承这个基类，
+             * 然后覆盖对应的钩子方法即可完成相应的声明周期阶段的管理工作
+             */
             initInternal();
             setStateInternal(LifecycleState.INITIALIZED, null, false);
         } catch (Throwable t) {

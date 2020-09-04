@@ -44,6 +44,7 @@ import javax.servlet.UnavailableException;
  * <code>addChild()</code> method should throw an
  * <code>IllegalArgumentException</code>.
  *
+ * Wrapper是一个Servlet的包装
  * @author Craig R. McClanahan
  */
 public interface Wrapper extends Container {

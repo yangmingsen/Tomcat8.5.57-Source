@@ -274,8 +274,15 @@ public abstract class ContainerBase extends LifecycleMBeanBase
     /**
      * The number of threads available to process start and stop events for any
      * children associated with this container.
+     * // 默认是1个线程
      */
     private int startStopThreads = 1;
+    /**
+     * 这个startStopExecutor线程池有什么用呢？
+     *
+     * 1. 在start的时候，如果发现有子容器，则会把子容器的start操作放在线程池中进行处理
+     * 2. 在stop的时候，也会把stop操作放在线程池中处理
+     */
     protected ThreadPoolExecutor startStopExecutor;
 
 
@@ -890,6 +897,7 @@ public abstract class ContainerBase extends LifecycleMBeanBase
                 getStartStopThreadsInternal(), 10, TimeUnit.SECONDS,
                 startStopQueue,
                 new StartStopThreadFactory(getName() + "-startStop-"));
+        // 允许core线程超时未获取任务时退出
         startStopExecutor.allowCoreThreadTimeOut(true);
         super.initInternal();
     }
