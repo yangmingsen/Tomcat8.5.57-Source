@@ -967,6 +967,8 @@ public class HostConfig implements LifecycleListener {
             context.setPath(cn.getPath());
             context.setWebappVersion(cn.getVersion());
             context.setDocBase(cn.getBaseName() + ".war");
+
+            // 添加StandardContext对象
             host.addChild(context);
         } catch (Throwable t) {
             ExceptionUtils.handleThrowable(t);

@@ -747,6 +747,7 @@ public abstract class ContainerBase extends LifecycleMBeanBase
             if ((getState().isAvailable() ||
                     LifecycleState.STARTING_PREP.equals(getState())) &&
                     startChildren) {
+                // StandardContext启动
                 child.start();
             }
         } catch (LifecycleException e) {

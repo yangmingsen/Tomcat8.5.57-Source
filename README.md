@@ -47,6 +47,17 @@ Connector就是使用ProtocolHandler来处理请求的，不同的ProtocolHandle
 
 （3）Endpoint的抽象实现AbstractEndpoint里面定义的Acceptor和AsyncTimeout两个内部类和一个Handler接口。Acceptor用于监听请求，AsyncTimeout用于检查异步Request的超时，Handler用于处理接收到的Socket，在内部调用Processor进行处理。
 
+### 启动过程
+![启动过程](static/8.png)
+* Server 代表整个Servlet容器，也是Tomcat层次结构中最外层唯一的一个组件。包含一或多个Service。
+* Service 代表一个web服务，包含一或多个Connector和一个Engine。
+* Connector 代表一个网络连接器，一个Connector设置了本机的某一个端口（如80端口）使用某一种协议接收网络请求。
+* Engine 代表Service的请求处理器，负责处理和分发Connector接收的所有请求，是最上层的Container。包含一或多个Host。
+* Host 代表一个虚拟主机（也可以看做一个域名，如//localhost/），例如Engine会把请求传递给HTTP请求头的host对应的Host容器。包含一或多个Context。
+* Context 代表一个web应用，Host会根据请求URI的路径把请求传递给相应的Context容器，Context会继续把请求传递给Wrapper(Servlet)。
+#### 启动时序图
+![时序图](static/tomcat_sequence.jpg)
+
 ### 类加载机制
 ![类加载机制图](static/one.png)
 
