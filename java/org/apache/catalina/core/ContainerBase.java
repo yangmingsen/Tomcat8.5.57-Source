@@ -336,6 +336,20 @@ public abstract class ContainerBase extends LifecycleMBeanBase
      * a thread to be spawn. After waiting the specified amount of time,
      * the thread will invoke the executePeriodic method on this container
      * and all its children.
+     *
+     * 获取在此容器及其子容器上调用backgroundProcess方法之间的延迟。
+     * 如果子容器的延迟值不为负（则表示它们正在使用自己的线程），则不会调用它们。
+     * 将此值设置为正值将导致产生线程。 等待指定的时间后，线程将对此容器及其所有子容器调用executePeriodic方法。
+     *
+     *
+     * backgroundProcessorDelay 参数默认值为 -1，单位为秒，即默认不启用后台线程，
+     * 而 tomcat 的 Container 容器需要开启线程处理一些后台任务，比如监听 jsp 变更、tomcat 配置变动、Session 过期等等，
+     * 因此 StandardEngine 在构造方法中便将 backgroundProcessorDelay 参数设为 10（当然可以在 server.xml 中指定该参数），
+     * 即每隔 10s 执行一次。那么这个线程怎么控制生命周期呢？我们注意到 ContainerBase 有个 threadDone 变量，用 volatile 修饰
+     * ，如果调用 Container 容器的 stop 方法该值便会赋值为 false，那么该后台线程也会退出循环，从而结束生命周期。另外，
+     * 有个地方需要注意下，父容器在处理子容器的后台任务时，需要判断子容器的 backgroundProcessorDelay 值，
+     * 只有当其小于等于 0 才进行处理，因为如果该值大于0，子容器自己会开启线程自行处理，这时候父容器就不需要再做处理了
+     *
      */
     @Override
     public int getBackgroundProcessorDelay() {
@@ -957,10 +971,11 @@ public abstract class ContainerBase extends LifecycleMBeanBase
             ((Lifecycle) pipeline).start();
         }
 
-
+        //这里最终会到HostConfig的lifecycleEvent方法的start()语句执行
         setState(LifecycleState.STARTING);
 
         // Start our thread
+        // 开启ContainerBackgroundProcessor线程用于处理子容器，默认情况下backgroundProcessorDelay=-1，不会启用该线程
         threadStart();
     }
 
@@ -1132,6 +1147,14 @@ public abstract class ContainerBase extends LifecycleMBeanBase
      * Execute a periodic task, such as reloading, etc. This method will be
      * invoked inside the classloading context of this container. Unexpected
      * throwables will be caught and logged.
+     *
+     * 执行定期任务，例如重新加载等。此方法将在此容器的classloading上下文内调用。 意外的可扔物将被捕获并记录。
+     *
+     *
+     * StandardManager 继承至 ManagerBase，它实现了主要的逻辑，关于 Session 清理的代码如下所示。
+     * backgroundProcess 默认是每隔10s调用一次，但是在 ManagerBase 做了取模处理，默认情况下是 60s 进行一次 Session 清理。
+     * tomcat 对 Session 的清理并没有引入时间轮，因为对 Session 的时效性要求没有那么精确，而且除了通知 SessionListener。
+     *
      */
     @Override
     public void backgroundProcess() {
@@ -1352,6 +1375,7 @@ public abstract class ContainerBase extends LifecycleMBeanBase
                     "containerBase.backgroundProcess.unexpectedThreadDeath",
                     Thread.currentThread().getName());
             try {
+                // threadDone 是 volatile 变量，由外面的容器控制
                 while (!threadDone) {
                     try {
                         Thread.sleep(backgroundProcessorDelay * 1000L);
@@ -1390,6 +1414,8 @@ public abstract class ContainerBase extends LifecycleMBeanBase
                 container.backgroundProcess();
                 Container[] children = container.findChildren();
                 for (Container child : children) {
+                    // 如果子容器的 backgroundProcessorDelay 参数小于0，则递归处理子容器
+                    // 因为如果该值大于0，说明子容器自己开启了线程处理，因此父容器不需要再做处理
                     if (child.getBackgroundProcessorDelay() <= 0) {
                         processChildren(child);
                     }

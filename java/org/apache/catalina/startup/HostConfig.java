@@ -611,6 +611,7 @@ public class HostConfig implements LifecycleListener {
                 }
             }
 
+            //这里会执行到StandardContext.startInternal方法
             host.addChild(context);
         } catch (Throwable t) {
             ExceptionUtils.handleThrowable(t);

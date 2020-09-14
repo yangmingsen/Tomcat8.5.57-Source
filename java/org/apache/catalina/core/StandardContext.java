@@ -5528,6 +5528,7 @@ public class StandardContext extends ContainerBase
         if (!getState().isAvailable())
             return;
 
+        // 热加载 class，或者 jsp
         Loader loader = getLoader();
         if (loader != null) {
             try {
@@ -5537,6 +5538,7 @@ public class StandardContext extends ContainerBase
                         "standardContext.backgroundProcess.loader", loader), e);
             }
         }
+        // 清理过期Session
         Manager manager = getManager();
         if (manager != null) {
             try {
@@ -5547,6 +5549,8 @@ public class StandardContext extends ContainerBase
                         e);
             }
         }
+
+        // 清理资源文件的缓存
         WebResourceRoot resources = getResources();
         if (resources != null) {
             try {
@@ -5557,6 +5561,8 @@ public class StandardContext extends ContainerBase
                         resources), e);
             }
         }
+
+        // 清理对象或class信息缓存
         InstanceManager instanceManager = getInstanceManager();
         if (instanceManager instanceof DefaultInstanceManager) {
             try {
@@ -5567,6 +5573,10 @@ public class StandardContext extends ContainerBase
                         resources), e);
             }
         }
+
+
+        //StandardContext 重写了 backgroundProcess 方法，在调用子容器的后台任务之前，还会调用 Loader、Manager、WebResourceRoot、InstanceManager 的后台任务
+        // 调用子容器的 backgroundProcess 任务
         super.backgroundProcess();
     }
 

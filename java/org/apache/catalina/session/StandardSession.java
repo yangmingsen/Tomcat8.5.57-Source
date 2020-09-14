@@ -659,6 +659,7 @@ public class StandardSession implements HttpSession, Session, Serializable {
             return true;
         }
 
+        // 如果指定了最大不活跃时间，才会进行清理，这个时间是 Context.getSessionTimeout()，默认是30分钟
         if (maxInactiveInterval > 0) {
             int timeIdle = (int) (getIdleTimeInternal() / 1000L);
             if (timeIdle >= maxInactiveInterval) {
@@ -755,6 +756,15 @@ public class StandardSession implements HttpSession, Session, Serializable {
      * Perform the internal processing required to invalidate this session,
      * without triggering an exception if the session has already expired.
      *
+     *
+     * 而 expire 方法处理的逻辑较繁锁，下面我用伪代码简单地描述下核心的逻辑，
+     * 由于这个步骤可能会有多线程进行操作，因此使用 synchronized 对当前 Session 对象加锁，
+     * 还做了双重校验，避免重复处理过期 Session。它还会向 Container 容器发出事件通知，
+     * 还会调用 HttpSessionListener 进行事件通知，这个也就是我们 web 应用开发的 HttpSessionListener 了。
+     * 由于 Manager 中维护了 Session 对象，因此还要将其从 Manager 移除。Session 最重要的功能就是存储数据了，
+     * 可能存在强引用，而导致 Session 无法被 gc 回收，因此还要移除内部的 key/value 数据。由此可见，tomcat 编码的严谨性了，
+     * 稍有不慎将可能出现并发问题，以及出现内存泄露
+     *
      * @param notify Should we notify listeners about the demise of
      *  this session?
      */
@@ -766,6 +776,7 @@ public class StandardSession implements HttpSession, Session, Serializable {
         if (!isValid)
             return;
 
+        //1、校验 isValid 值，如果为 false 直接返回，说明已经被销毁了
         synchronized (this) {
             // Check again, now we are inside the sync so this code only runs once
             // Double check locking - isValid needs to be volatile
@@ -782,6 +793,7 @@ public class StandardSession implements HttpSession, Session, Serializable {
 
             // Notify interested application event listeners
             // FIXME - Assumes we call listeners in reverse order
+            //2、双重校验 isValid 值，避免并发问题
             Context context = manager.getContext();
 
             // The call to expire() may not have been triggered by the webapp.
@@ -802,6 +814,8 @@ public class StandardSession implements HttpSession, Session, Serializable {
                             HttpSessionListener listener =
                                 (HttpSessionListener) listeners[j];
                             try {
+                                //3、判断是否为 HttpSessionListener，不是则继续循环
+                                //4、向容器发出Destory事件，并调用 HttpSessionListener.sessionDestroyed() 进行通知
                                 context.fireContainerEvent("beforeSessionDestroyed",
                                         listener);
                                 listener.sessionDestroyed(event);

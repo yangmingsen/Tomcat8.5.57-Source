@@ -1612,6 +1612,7 @@ public class NioEndpoint extends AbstractJsseEndpoint<NioChannel> {
     /**
      * This class is the equivalent of the Worker, but will simply use in an
      * external Executor thread pool.
+     * 此类等效于Worker，但仅在外部Executor线程池中使用。
      */
     protected class SocketProcessor extends SocketProcessorBase<NioChannel> {
 
@@ -1634,11 +1635,13 @@ public class NioEndpoint extends AbstractJsseEndpoint<NioChannel> {
                         if (socket.isHandshakeComplete()) {
                             // No TLS handshaking required. Let the handler
                             // process this socket / event combination.
+                            //不需要TLS握手。 让处理程序处理此套接字/事件组合。
                             handshake = 0;
                         } else if (event == SocketEvent.STOP || event == SocketEvent.DISCONNECT ||
                                 event == SocketEvent.ERROR) {
                             // Unable to complete the TLS handshake. Treat it as
                             // if the handshake failed.
+                            //无法完成TLS握手。 像握手失败一样对待它。
                             handshake = -1;
                         } else {
                             handshake = socket.handshake(key.isReadable(), key.isWritable());
@@ -1649,6 +1652,10 @@ public class NioEndpoint extends AbstractJsseEndpoint<NioChannel> {
                             // must always be OPEN_READ after it completes. It
                             // is OK to always set this as it is only used if
                             // the handshake completes.
+                            ////握手过程从套接字读取/向套接字写入。
+                            // 因此，一旦握手完成，状态可能为OPEN_WRITE。
+                            // 但是，握手是在套接字打开时发生的，因此完成后状态必须始终为OPEN_READ。
+                            // 可以始终设置此项，因为仅在握手完成后才使用。
                             event = SocketEvent.OPEN_READ;
                         }
                     }

@@ -2436,6 +2436,7 @@ public class Request implements HttpServletRequest {
      */
     @Override
     public HttpSession getSession() {
+        // 这里就是 通过 managerBase.sessions 获取 Session
         Session session = doGetSession(true);
         if (session == null) {
             return null;
@@ -2987,15 +2988,18 @@ public class Request implements HttpServletRequest {
 
     // ------------------------------------------------------ Protected Methods
 
+    // create 代表是否创建 StandardSession
     protected Session doGetSession(boolean create) {
 
         // There cannot be a session if no context has been assigned yet
+        // 1. 检验 StandardContext
         Context context = getContext();
         if (context == null) {
             return null;
         }
 
         // Return the current session if it exists and is valid
+        // 2. 校验 Session 的有效性
         if ((session != null) && !session.isValid()) {
             session = null;
         }
@@ -3004,12 +3008,15 @@ public class Request implements HttpServletRequest {
         }
 
         // Return the requested session if it exists and is valid
+        //拿到StandardContext 中对应的StandardManager，Context与 Manager 是一对一的关系
         Manager manager = context.getManager();
         if (manager == null) {
             return null;      // Sessions are not supported
         }
         if (requestedSessionId != null) {
             try {
+                // 3. 通过 managerBase.sessions 获取 Session
+                // 4. 通过客户端的 sessionId 从 managerBase.sessions 来获取 Session 对象
                 session = manager.findSession(requestedSessionId);
             } catch (IOException e) {
                 if (log.isDebugEnabled()) {
@@ -3019,16 +3026,19 @@ public class Request implements HttpServletRequest {
                 }
                 session = null;
             }
+            // 5. 判断 session 是否有效
             if ((session != null) && !session.isValid()) {
                 session = null;
             }
             if (session != null) {
+                // 6. session access +1
                 session.access();
                 return session;
             }
         }
 
         // Create a new session if requested and the response is not committed
+        // 7. 根据标识是否创建 StandardSession ( false 直接返回)
         if (!create) {
             return null;
         }

@@ -35,6 +35,20 @@ import java.io.IOException;
  *     <code>start()</code> on the same <code>Manager</code> instance.
  * </ul>
  *
+ * 其中 Context 对应一个 webapp 应用，每个 webapp 有多个 HttpSessionListener，
+ * 并且每个应用的 session 是独立管理的，而 session 的创建、销毁由 Manager 组件完成，它内部维护了 N 个 Session 实例对象。
+ * 在前面的文章中，我们分析了 Context 组件，它的默认实现是 StandardContext，它与 Manager 是一对一的关系，
+ * Manager 创建、销毁会话时，需要借助 StandardContext 获取 HttpSessionListener 列表并进行事件通知，
+ * 而 StandardContext 的后台线程会对 Manager 进行过期 Session 的清理工作
+ *
+ *
+ * tomcat8.5 提供了 4 种实现，默认使用 StandardManager，tomcat 还提供了集群会话的解决方案，但是在实际项目中很少运用
+ *
+ * StandardManager：Manager 默认实现，在内存中管理 session，宕机将导致 session 丢失；但是当调用 Lifecycle 的 start/stop 接口时，将采用 jdk 序列化保存 Session 信息，因此当 tomcat 发现某个应用的文件有变更进行 reload 操作时，这种情况下不会丢失 Session 信息
+ * DeltaManager：增量 Session 管理器，用于Tomcat集群的会话管理器，某个节点变更 Session 信息都会同步到集群中的所有节点，这样可以保证 Session 信息的实时性，但是这样会带来较大的网络开销
+ * BackupManager：用于 Tomcat 集群的会话管理器，与DeltaManager不同的是，某个节点变更 Session 信息的改变只会同步给集群中的另一个 backup 节点
+ * PersistentManager：当会话长时间空闲时，将会把 Session 信息写入磁盘，从而限制内存中的活动会话数量；此外，它还支持容错，会定期将内存中的 Session 信息备份到磁盘
+ *
  * @author Craig R. McClanahan
  */
 public interface Manager {
