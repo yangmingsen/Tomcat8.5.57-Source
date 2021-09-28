@@ -32,6 +32,25 @@ import org.apache.tomcat.util.net.SSLHostConfig;
  * @see Adapter
  */
 public interface ProtocolHandler {
+    //要理解Connector，我们需要问自己4个问题。
+    //
+    //（1）Connector如何接受请求的？
+    //（2）如何将请求封装成Request和Response的？
+    //（3）封装完之后的Request和Response如何交给Container进行处理的？
+    //（4）Container处理完之后如何交给Connector并返回给客户端的？
+    //
+    // Connector的启动方法就是ProtocolHandler.start()
+
+    //ProtocolHandler包含三个部件：Endpoint、Processor、Adapter。
+    //
+    //1.Endpoint用来处理底层Socket的网络连接，Processor用于将Endpoint接收到的Socket封装成Request，
+    // Adapter用于将Request交给Container进行具体的处理。
+    //
+    //2.Endpoint由于是处理底层的Socket网络连接，因此Endpoint是用来实现TCP/IP协议的，而Processor用来实现HTTP协议的，
+    // Adapter将请求适配到Servlet容器进行具体的处理。
+    //
+    //3.Endpoint的抽象实现类AbstractEndpoint里面定义了Acceptor和AsyncTimeout两个内部类和一个Handler接口。
+    // Acceptor用于监听请求，AsyncTimeout用于检查异步Request的超时，Handler用于处理接收到的Socket，在内部调用Processor进行处理。
 
     /**
      * Return the adapter associated with the protocol handler.

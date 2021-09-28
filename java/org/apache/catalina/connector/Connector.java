@@ -56,6 +56,12 @@ import org.apache.tomcat.util.res.StringManager;
  * @author Remy Maucherat
  */
 public class Connector extends LifecycleMBeanBase  {
+    //要理解Connector，我们需要问自己4个问题。
+    //
+    //（1）Connector如何接受请求的？
+    //（2）如何将请求封装成Request和Response的？
+    //（3）封装完之后的Request和Response如何交给Container进行处理的？
+    //（4）Container处理完之后如何交给Connector并返回给客户端的？
 
     private static final Log log = LogFactory.getLog(Connector.class);
 
@@ -77,8 +83,22 @@ public class Connector extends LifecycleMBeanBase  {
         this(null);
     }
 
-
+    /**
+     * 构造方法主要做了下面几件事情：
+     *
+     * 1. 无参构造方法，传入参数为空协议，会默认使用HTTP/1.1
+     *
+     * 2. HTTP/1.1或null，protocolHandler使用org.apache.coyote.http11.Http11NioProtocol，不考虑apr
+     *
+     * 3. AJP/1.3，protocolHandler使用org.apache.coyote.ajp.AjpNioProtocol，不考虑apr
+     *
+     * 4. 其他情况，使用传入的protocol作为protocolHandler的类名
+     *
+     * 5. 使用protocolHandler的类名构造ProtocolHandler的实例
+     * @param protocol
+     */
     public Connector(String protocol) {
+
         setProtocol(protocol);
         // Instantiate protocol handler
         // 5. 使用protocolHandler的类名构造ProtocolHandler的实例
@@ -1045,6 +1065,10 @@ public class Connector extends LifecycleMBeanBase  {
 
     @Override
     protected void initInternal() throws LifecycleException {
+        //init()方法做了3件事情
+        //初始化adapter
+        //设置接受body的method列表，默认为POST
+        //初始化protocolHandler
 
         super.initInternal();
 

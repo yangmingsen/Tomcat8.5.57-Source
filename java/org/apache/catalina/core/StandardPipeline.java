@@ -181,6 +181,8 @@ public class StandardPipeline extends LifecycleBase
      */
     @Override
     protected synchronized void startInternal() throws LifecycleException {
+        //它也是一个Lifecycle。在容器启动的时候，StandardPipeline 会遍历 Valve 链表，
+        // 如果 Valve 是 Lifecycle 的子类，则会调用其 start 方法启动 Valve 组件
 
         // Start the Valves in our pipeline (including the basic), if any
         Valve current = first;

@@ -821,7 +821,8 @@ public class StandardHost extends ContainerBase implements Host {
     @Override
     protected synchronized void startInternal() throws LifecycleException {
 
-        // Set error report valve   // errorValve默认使用org.apache.catalina.valves.ErrorReportValve
+        // Set error report valve
+        // errorValve默认使用org.apache.catalina.valves.ErrorReportValve
         String errorValve = getErrorReportValveClass();
         if ((errorValve != null) && (!errorValve.equals(""))) {
             try {

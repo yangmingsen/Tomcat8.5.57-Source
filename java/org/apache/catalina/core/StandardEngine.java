@@ -69,6 +69,7 @@ public class StandardEngine extends ContainerBase implements Engine {
      * Create a new StandardEngine component with the default basic Valve.
      */
     public StandardEngine() {
+       //StandardEngine主要职责为：使用默认的基础阀门创建标准Engine组件。
 
         super();
         pipeline.setBasic(new StandardEngineValve());
@@ -238,6 +239,12 @@ public class StandardEngine extends ContainerBase implements Engine {
     }
 
 
+    //StandardEngine继承至ContainerBase，而ContainerBase重写了initInternal()方法，用于初始化start、stop线程池，这个线程池有以下特点：
+    //1. core线程和max是相等的，默认为1
+    //2. 允许core线程在超时未获取到任务时退出线程
+    //3. 线程获取任务的超时时间是10s，也就是说所有的线程(包括core线程)，超过10s未获取到任务，那么这个线程就会被销毁
+    //
+    //这么做的初衷是什么呢？因为这个线程池只需要在容器启动和停止的时候发挥作用，没必要时时刻刻处理任务队列
     @Override
     protected void initInternal() throws LifecycleException {
         // Ensure that a Realm is present before any attempt is made to start

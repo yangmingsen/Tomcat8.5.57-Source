@@ -41,6 +41,8 @@ package org.apache.catalina;
  * @author Craig R. McClanahan
  */
 public interface Engine extends Container {
+    //Engine的标准实现为org.apache.catalina.core.StandardEngine。
+    // 我们先来看看构造函数。其主要职责为：使用默认的基础阀门创建标准Engine组件。
 
     /**
      * @return the default host name for this Engine.

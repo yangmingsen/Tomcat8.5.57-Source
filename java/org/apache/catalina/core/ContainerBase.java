@@ -277,6 +277,7 @@ public abstract class ContainerBase extends LifecycleMBeanBase
      * // 默认是1个线程
      */
     private int startStopThreads = 1;
+
     /**
      * 这个startStopExecutor线程池有什么用呢？
      *
@@ -941,14 +942,19 @@ public abstract class ContainerBase extends LifecycleMBeanBase
         }
 
         // Start our child containers, if any
+        // 把子容器的启动步骤放在线程中处理，默认情况下线程池只有一个线程处理任务队列
         Container children[] = findChildren();
         List<Future<Void>> results = new ArrayList<>();
+
+       //ContainerBase会把StartChild任务丢给线程池处理，得到Future，
+        // 并且会遍历所有的Future进行阻塞result.get()，这个操作是将异步启动转同步，子容器启动完成才会继续运行
         for (Container child : children) {
             results.add(startStopExecutor.submit(new StartChild(child)));
         }
 
         MultiThrowable multiThrowable = null;
 
+        // 阻塞当前线程，直到子容器start完成
         for (Future<Void> result : results) {
             try {
                 result.get();
@@ -966,6 +972,7 @@ public abstract class ContainerBase extends LifecycleMBeanBase
                     multiThrowable.getThrowable());
         }
 
+        // 启用Pipeline
         // Start the Valves in our pipeline (including the basic), if any
         if (pipeline instanceof Lifecycle) {
             ((Lifecycle) pipeline).start();

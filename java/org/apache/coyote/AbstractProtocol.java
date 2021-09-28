@@ -586,6 +586,7 @@ public abstract class AbstractProtocol<S> implements ProtocolHandler,
         endpoint.setDomain(domain);
 
         // 2. 初始化endpoint
+        //该方法位于AbstactEndpoint抽象类，该类是基于模板方法模式实现的，主要调用了子类的bind()方法。
         endpoint.init();
     }
 

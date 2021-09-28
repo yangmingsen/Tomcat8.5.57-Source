@@ -420,6 +420,7 @@ public class StandardService extends LifecycleMBeanBase implements Service {
         if (engine != null) {
             synchronized (engine) {
                 // 启动Engine
+                //1. 启动Engine，Engine的child容器都会被启动，webapp的部署会在这个步骤完成；
                 engine.start();
             }
         }
@@ -427,6 +428,7 @@ public class StandardService extends LifecycleMBeanBase implements Service {
         synchronized (executors) {
             for (Executor executor: executors) {
                 // 启动Executor线程池
+                //2. 启动Executor，这是tomcat用Lifecycle封装的线程池，继承至java.util.concurrent.Executor以及tomcat的Lifecycle接口
                 executor.start();
             }
         }
@@ -440,6 +442,7 @@ public class StandardService extends LifecycleMBeanBase implements Service {
                     // If it has already failed, don't try and start it
                     if (connector.getState() != LifecycleState.FAILED) {
                         // 启动Connector
+                        //3. 启动Connector组件，由Connector完成Endpoint的启动，这个时候意味着tomcat可以对外提供请求服务了
                         connector.start();
                     }
                 } catch (Exception e) {
@@ -532,6 +535,11 @@ public class StandardService extends LifecycleMBeanBase implements Service {
      */
     @Override
     protected void initInternal() throws LifecycleException {
+        //StandardService和StandardServer都是继承至LifecycleMBeanBase，因此公共的初始化逻辑都是一样的
+        //1.首先，往jmx中注册StandardService
+        //2.初始化Engine，而Engine初始化过程中会去初始化Realm(权限相关的组件)
+        //3.如果存在Executor线程池，还会进行init操作，这个Excecutor是tomcat的接口，继承至java.util.concurrent.Executor、org.apache.catalina.Lifecycle
+        //4.初始化Connector连接器，默认有http1.1、ajp连接器，而这个Connector初始化过程，又会对ProtocolHandler进行初始化，开启应用端口的监听
 
         // 往jmx中注册自己
         super.initInternal(); //往jmx中注册StandardService

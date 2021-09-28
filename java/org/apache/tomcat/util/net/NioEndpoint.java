@@ -495,6 +495,7 @@ public class NioEndpoint extends AbstractJsseEndpoint<NioChannel> {
                 try {
                     //if we have reached max connections, wait
                     // 3. 如果请求达到了最大连接数，则wait直到连接数降下来
+                    //countUpOrAwaitConnection函数检查当前最大连接数，若未达到maxConnections则加一，否则等待；
                     countUpOrAwaitConnection();
 
                     SocketChannel socket = null;
@@ -502,6 +503,8 @@ public class NioEndpoint extends AbstractJsseEndpoint<NioChannel> {
                         // Accept the next incoming connection from the server
                         // socket
                         // 4. 接受下一次连接的socket
+                        //这一行中的serverSock正是NioEndpoint的bind函数中打开的ServerSocketChannel。
+                        // 为了引用这个变量，NioEndpoint的Acceptor类是成员而不再是静态类；
                         socket = serverSock.accept();
                     } catch (IOException ioe) {
                         // We didn't get a socket
@@ -523,6 +526,7 @@ public class NioEndpoint extends AbstractJsseEndpoint<NioChannel> {
                         // setSocketOptions() will hand the socket off to
                         // an appropriate processor if successful
                         // 5. `setSocketOptions()`这儿是关键，会将socket以事件的方式传递给poller
+                        //setSocketOptions函数调用上的注释表明该函数将已连接套接字交给Poller线程处理。
                         if (!setSocketOptions(socket)) {
                             closeSocket(socket);
                         }

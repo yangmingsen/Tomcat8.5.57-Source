@@ -427,6 +427,13 @@ public abstract class AbstractEndpoint<S> {
     public void setAcceptorThreadCount(int acceptorThreadCount) {
         this.acceptorThreadCount = acceptorThreadCount;
     }
+
+    /**
+     * Acceptor线程主要用于监听套接字，将已连接套接字转给Poller线程。
+     *
+     * Acceptor线程数由AbstracEndPoint的acceptorThreadCount成员变量控制，默认值为1
+     * @return
+     */
     public int getAcceptorThreadCount() { return acceptorThreadCount; }
 
 
@@ -1076,6 +1083,7 @@ public abstract class AbstractEndpoint<S> {
             // 1. 从`processorCache`里面拿一个`Processor`来处理socket，`Processor`的实现为`SocketProcessor`
             SocketProcessorBase<S> sc = processorCache.pop();
             if (sc == null) {
+                //AbstractEndPoint类的createSocketProcessor是抽象方法，NioEndPoint类实现了它
                 sc = createSocketProcessor(socketWrapper, event);
             } else {
                 sc.reset(socketWrapper, event);
@@ -1194,6 +1202,7 @@ public abstract class AbstractEndpoint<S> {
 
 
     public final void start() throws Exception {
+        // 1. `bind()`已经在`init()`中分析过了
         if (bindState == BindState.UNBOUND) {
             bind();
             bindState = BindState.BOUND_ON_START;
