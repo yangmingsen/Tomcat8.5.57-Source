@@ -168,8 +168,28 @@ public final class ApplicationFilterChain implements FilterChain {
         }
     }
 
-    // 1. `internalDoFilter`方法通过pos和n来调用过滤器链里面的每个过滤器。pos表示当前的过滤器下标，n表示总的过滤器数量
-    // 2. `internalDoFilter`方法最终会调用servlet.service()方法
+
+
+    /**
+     * 1. `internalDoFilter`方法通过pos和n来调用过滤器链里面的每个过滤器。pos表示当前的过滤器下标，n表示总的过滤器数量
+     * 2. `internalDoFilter`方法最终会调用servlet.service()方法
+     *
+     *  这个地方是通过 pos和n来控制是否会执行到下面的   servlet.service(request, response) 方法的。
+     *     在进行 "if (pos < n)" 的循环(有点儿像递归）中 会调用 filter.doFilter(request, response, this)这个方法，
+     *      这个方法会调用我们定义的业务逻辑过滤器，也就是实现了 Filter#doFilter(...)接口。 在这个方法里头，
+     *       如果需要结束业务逻辑的执行（也就是不允许再往下执行了），就可以使用 return 直接返回，那样 这个internalDoFilter方法就会执行到后面 return语句，
+     *         这样就不会执行到下面的 servlet.service(request, response) 方法了，那么我们的后续业务逻辑也就不会执行了。
+     *
+     *    再说下，会执行我们后续业务逻辑的情况：
+     *       就是我们定义的实现了 Filter#doFilter(...)接口的业务逻辑类中没有使用 return 返回， 那么 "if (pos < n)" 会一直循环下去，
+     *          直到 pos 等于 n 为止， 那么 下面的 "if (pos <n )"条件就不会成立。 也就不会执行里面的 filter.doFilter(request, response, this)方法了，
+     *             这样就会执行到后续的 servlet.service(request, response) 方法了。
+     *
+     * @param request
+     * @param response
+     * @throws IOException
+     * @throws ServletException
+     */
     private void internalDoFilter(ServletRequest request,
                                   ServletResponse response)
         throws IOException, ServletException {
@@ -214,6 +234,7 @@ public final class ApplicationFilterChain implements FilterChain {
             return;
         }
 
+        //当所有的 业务过滤器都执行完了，我们开始执行 service方法
         // We fell off the end of the chain -- call the servlet instance
         try {
             if (ApplicationDispatcher.WRAP_SAME_OBJECT) {
